@@ -178,7 +178,7 @@ func (p *parser) parseParenthesis(f func(bool) (Expr, error)) (Expr, error) {
 		return nil, unexpectedEof
 	}
 	if t.Type != typeOpenParen {
-		return nil, fmt.Errorf("expected '(', got %s", t.Type)
+		return nil, fmt.Errorf("expected '(', got %s", t)
 	}
 
 	res, err := f(true)
@@ -191,7 +191,7 @@ func (p *parser) parseParenthesis(f func(bool) (Expr, error)) (Expr, error) {
 		return nil, unexpectedEof
 	}
 	if t.Type != typeCloseParen {
-		return nil, fmt.Errorf("expected ')', got %s", t.Type)
+		return nil, fmt.Errorf("expected ')', got %s", t)
 	}
 	return res, nil
 }
@@ -209,7 +209,7 @@ func (p *parser) parseValuePath(encompassed bool) (Expr, error) {
 		return nil, unexpectedEof
 	}
 	if t.Type != typeOpenSquareBrace {
-		return nil, fmt.Errorf("expected '[', got %s", t.Type)
+		return nil, fmt.Errorf("expected '[', got %s", t)
 	}
 
 	p.consumeNext()
@@ -223,7 +223,7 @@ func (p *parser) parseValuePath(encompassed bool) (Expr, error) {
 		return nil, unexpectedEof
 	}
 	if t.Type != typeCloseSquareBrace {
-		return nil, fmt.Errorf("expected ']', got %s", t.Type)
+		return nil, fmt.Errorf("expected ']', got %s", t)
 	}
 
 	return PathExpr{Attr: attr, SubAttrExpr: expr, encompassed: encompassed}, nil
@@ -241,7 +241,7 @@ func (p *parser) parseAttrExpr(encompassed bool) (Expr, error) {
 		return nil, unexpectedEof
 	}
 	if operator.Type != typeBareword {
-		return nil, fmt.Errorf("expected operator, got %s", operator.Type)
+		return nil, fmt.Errorf("expected operator, got %s", operator)
 	}
 	if operator.Value == "pr" {
 		return PresentExpr{Attr: attr, encompassed: encompassed}, nil
@@ -263,7 +263,7 @@ func (p *parser) parseAttrExpr(encompassed bool) (Expr, error) {
 	case typeNull:
 		operandValue = Value{Value: operand.Value, Type: ValueTypeNull}
 	default:
-		return nil, fmt.Errorf("unexpected operand type: %s", operand.Type)
+		return nil, fmt.Errorf("unexpected operand type: %s", operand)
 	}
 
 	switch operator.Value {
@@ -286,7 +286,7 @@ func (p *parser) parseAttrExpr(encompassed bool) (Expr, error) {
 	case "le":
 		return LessThanOrEqualsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
 	default:
-		return nil, fmt.Errorf("unknown operator: %s", operator.Value)
+		return nil, fmt.Errorf("unknown operator: %s", operator)
 	}
 }
 
@@ -299,7 +299,7 @@ func (p *parser) parseAttrPath() (Attr, error) {
 		return Attr{}, unexpectedEof
 	}
 	if t.Type != typeBareword {
-		return Attr{}, fmt.Errorf("expected bareword, got %s", t.Type)
+		return Attr{}, fmt.Errorf("expected bareword, got %s", t)
 	}
 
 	// todo validate attr name schema, etc...
@@ -320,7 +320,7 @@ func (p *parser) parseAttrPath() (Attr, error) {
 	case 2:
 		return Attr{Attr: a[0], SubAttr: a[1]}, nil
 	default:
-		return Attr{}, fmt.Errorf("invalid attribute path: %s", t.Value)
+		return Attr{}, fmt.Errorf("invalid attribute path: %s", t)
 	}
 }
 

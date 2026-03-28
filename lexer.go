@@ -21,9 +21,19 @@ const (
 	typeNull                       = "typeNull"
 )
 
+type Loc struct {
+	Start int
+	End   int
+}
+
 type Token struct {
-	Type  TokenType
+	Loc   Loc
 	Value string
+	Type  TokenType
+}
+
+func (t Token) String() string {
+	return fmt.Sprintf("<%s:%s:loc(%d:%d)>", t.Type, t.Value, t.Loc.Start, t.Loc.End)
 }
 
 type tokenizer struct {
@@ -40,6 +50,9 @@ func Tokenize(s string) ([]Token, error) {
 		if err != nil {
 			return nil, err
 		}
+		if w.Type == "" {
+			break
+		}
 		res = append(res, w)
 	}
 	return res, nil
@@ -49,21 +62,21 @@ func (t *tokenizer) nextToken() (Token, error) {
 	switch t.s[t.i] {
 	case '[':
 		t.i += 1
-		return Token{Type: typeOpenSquareBrace, Value: "["}, nil
+		return Token{Type: typeOpenSquareBrace, Value: "[", Loc: Loc{Start: t.i - 1, End: t.i}}, nil
 	case ']':
 		t.i += 1
-		return Token{Type: typeCloseSquareBrace, Value: "]"}, nil
+		return Token{Type: typeCloseSquareBrace, Value: "]", Loc: Loc{Start: t.i - 1, End: t.i}}, nil
 	case '(':
 		t.i += 1
-		return Token{Type: typeOpenParen, Value: "("}, nil
+		return Token{Type: typeOpenParen, Value: "(", Loc: Loc{Start: t.i - 1, End: t.i}}, nil
 	case ')':
 		t.i += 1
-		return Token{Type: typeCloseParen, Value: ")"}, nil
+		return Token{Type: typeCloseParen, Value: ")", Loc: Loc{Start: t.i - 1, End: t.i}}, nil
 	case '"':
 		t.i += 1
 		for j := t.i; t.i < len(t.s); t.i++ {
 			if t.s[t.i] == '"' {
-				token := Token{Type: typeQuotedStr, Value: t.s[j:t.i]}
+				token := Token{Type: typeQuotedStr, Value: t.s[j:t.i], Loc: Loc{Start: j, End: t.i}}
 				t.i += 1
 				return token, nil
 			}
@@ -87,17 +100,21 @@ func (t *tokenizer) nextToken() (Token, error) {
 		}
 		w := t.s[j:t.i]
 		if w == "null" {
-			return Token{Type: typeNull, Value: "null"}, nil
+			return Token{Type: typeNull, Value: "null", Loc: Loc{Start: j, End: t.i}}, nil
 		} else if w == "true" {
-			return Token{Type: typeBool, Value: "true"}, nil
+			return Token{Type: typeBool, Value: "true", Loc: Loc{Start: j, End: t.i}}, nil
 		} else if w == "false" {
-			return Token{Type: typeBool, Value: "false"}, nil
+			return Token{Type: typeBool, Value: "false", Loc: Loc{Start: j, End: t.i}}, nil
 		} else if t.isNumber(w) {
-			return Token{Type: typeNumber, Value: w}, nil
+			return Token{Type: typeNumber, Value: w, Loc: Loc{Start: j, End: t.i}}, nil
 		}
 
-		return Token{Type: typeBareword, Value: w}, nil
+		return Token{Type: typeBareword, Value: w, Loc: Loc{Start: j, End: t.i}}, nil
 	}
+}
+
+func (*tokenizer) loc(i, j int) Loc {
+	return Loc{Start: i, End: j}
 }
 
 func (*tokenizer) isNumber(s string) bool {
