@@ -8,30 +8,38 @@ type Expr interface {
 }
 
 type AndExpr struct {
-	Left  Expr
-	Right Expr
+	Left        Expr
+	Right       Expr
+	encompassed bool
 }
 
 func (e AndExpr) String() string {
-	return fmt.Sprintf("(%s and %s)", e.Left, e.Right)
+	if e.encompassed {
+		return fmt.Sprintf("(%s and %s)", e.Left, e.Right)
+	}
+	return fmt.Sprintf("%s and %s", e.Left, e.Right)
 }
 
 func (e AndExpr) isScimExpr() {}
 
 type OrExpr struct {
-	Expr
-	Left  Expr
-	Right Expr
+	Left        Expr
+	Right       Expr
+	encompassed bool
 }
 
 func (e OrExpr) String() string {
-	return fmt.Sprintf("(%s and %s)", e.Left, e.Right)
+	if e.encompassed {
+		return fmt.Sprintf("(%s or %s)", e.Left, e.Right)
+	}
+	return fmt.Sprintf("%s or %s", e.Left, e.Right)
 }
 
 func (e OrExpr) isScimExpr() {}
 
 type PresentExpr struct {
-	Attr Attr
+	Attr        Attr
+	encompassed bool
 }
 
 func (e PresentExpr) String() string {
@@ -41,7 +49,8 @@ func (e PresentExpr) String() string {
 func (e PresentExpr) isScimExpr() {}
 
 type NotExpr struct {
-	Expr Attr
+	Expr        Attr
+	encompassed bool
 }
 
 func (e NotExpr) isScimExpr() {}
@@ -51,8 +60,9 @@ func (e NotExpr) String() string {
 }
 
 type EqualsExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (e EqualsExpr) String() string {
@@ -62,8 +72,9 @@ func (e EqualsExpr) String() string {
 func (e EqualsExpr) isScimExpr() {}
 
 type NotEqualsExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (n NotEqualsExpr) String() string {
@@ -73,8 +84,9 @@ func (n NotEqualsExpr) String() string {
 func (n NotEqualsExpr) isScimExpr() {}
 
 type ContainsExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (c ContainsExpr) String() string {
@@ -84,8 +96,9 @@ func (c ContainsExpr) String() string {
 func (c ContainsExpr) isScimExpr() {}
 
 type StartsWithExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (s StartsWithExpr) String() string {
@@ -95,8 +108,9 @@ func (s StartsWithExpr) String() string {
 func (s StartsWithExpr) isScimExpr() {}
 
 type EndsWithExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (e EndsWithExpr) String() string {
@@ -106,8 +120,9 @@ func (e EndsWithExpr) String() string {
 func (e EndsWithExpr) isScimExpr() {}
 
 type GreaterThanExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (g GreaterThanExpr) String() string {
@@ -117,8 +132,9 @@ func (g GreaterThanExpr) String() string {
 func (g GreaterThanExpr) isScimExpr() {}
 
 type GreaterThanOrEqualsExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (g GreaterThanOrEqualsExpr) String() string {
@@ -128,8 +144,9 @@ func (g GreaterThanOrEqualsExpr) String() string {
 func (g GreaterThanOrEqualsExpr) isScimExpr() {}
 
 type LessThanExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (l LessThanExpr) String() string {
@@ -139,8 +156,9 @@ func (l LessThanExpr) String() string {
 func (l LessThanExpr) isScimExpr() {}
 
 type LessThanOrEqualsExpr struct {
-	Attr  Attr
-	Value Value
+	Attr        Attr
+	Value       Value
+	encompassed bool
 }
 
 func (l LessThanOrEqualsExpr) String() string {
@@ -150,35 +168,60 @@ func (l LessThanOrEqualsExpr) String() string {
 func (l LessThanOrEqualsExpr) isScimExpr() {}
 
 type PathExpr struct {
-	Attr Attr
+	Attr        Attr
+	SubAttrExpr Expr
+	encompassed bool
 }
 
 func (p PathExpr) String() string {
-	return p.Attr.String()
+	if p.SubAttrExpr == nil {
+		return p.Attr.String()
+	}
+	return fmt.Sprintf("%s[%s]", p.Attr, p.SubAttrExpr)
+}
+
+func (a PathExpr) HasSubAttrExpr() bool {
+	return a.SubAttrExpr != nil
 }
 
 func (p PathExpr) isScimExpr() {}
 
 type Attr struct {
-	Value       string
-	SubAttrExpr Expr
+	Attr    string
+	SubAttr string
 }
 
 func (a Attr) String() string {
-	if a.SubAttrExpr == nil {
-		return a.Value
+	if a.SubAttr == "" {
+		return fmt.Sprintf("%s", a.Attr)
 	}
-	return fmt.Sprintf("%s[%s]", a.Value, a.SubAttrExpr)
+	return fmt.Sprintf("%s.%s", a.Attr, a.SubAttr)
 }
 
-func (a Attr) HasSubAttrExpr() bool {
-	return a.SubAttrExpr != nil
-}
+type ValueType string
+
+const (
+	ValueTypeString  ValueType = "string"
+	ValueTypeNumber  ValueType = "number"
+	ValueTypeBoolean ValueType = "boolean"
+	ValueTypeNull    ValueType = "null"
+)
 
 type Value struct {
 	Value string
+	Type  ValueType
 }
 
 func (v Value) String() string {
-	return v.Value
+	switch v.Type {
+	case ValueTypeString:
+		return fmt.Sprintf("\"%s\"", v.Value)
+	case ValueTypeNumber:
+		return v.Value
+	case ValueTypeBoolean:
+		return fmt.Sprintf("%t", v.Value == "true")
+	case ValueTypeNull:
+		return "null"
+	}
+	panic(fmt.Sprintf("unknown value type: %s", v.Type))
 }
