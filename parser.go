@@ -9,14 +9,16 @@ import (
 type Operator string
 
 const (
-	AND                    Operator = "and"
-	OR                     Operator = "or"
+	AND Operator = "and"
+	OR  Operator = "or"
+
+	PRESENT Operator = "pr"
+
 	EQUALS                 Operator = "eq"
 	NOT_EQUALS             Operator = "ne"
 	CONTAINS               Operator = "co"
 	STARTS_WITH            Operator = "sw"
 	ENDS_WITH              Operator = "ew"
-	PRESENT                Operator = "pr"
 	GREATER_THAN           Operator = "gt"
 	GREATER_THAN_OR_EQUALS Operator = "ge"
 	LESS_THAN              Operator = "lt"
@@ -120,7 +122,6 @@ func (p *parser) parseLogical(initial Expr, encompassed bool) (Expr, error) {
 		}
 		if operator.Type != typeBareword || (operator.Value != "and" && operator.Value != "or") {
 			break
-			//return nil, fmt.Errorf("expected 'and' or 'or' operator, got %s", operator.Type)
 		}
 		p.consumeNext()
 
