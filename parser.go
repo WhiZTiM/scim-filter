@@ -111,7 +111,7 @@ func (p *parser) parseSingleFilter(encompassed bool) (Expr, error) {
 }
 
 func (p *parser) parseLogical(initial Expr, encompassed bool) (Expr, error) {
-	// we might need to use the shunting yard algorithm here.
+	// some shunting yard algorithm here.
 	operands := []Expr{initial}
 	operators := []string{}
 
@@ -132,7 +132,7 @@ func (p *parser) parseLogical(initial Expr, encompassed bool) (Expr, error) {
 
 		if operator.Value == "and" {
 			i := len(operands) - 1
-			operands[i] = AndExpr{Left: operands[i], Right: expr}
+			operands[i] = LogicalExpr{Left: operands[i], Right: expr, Type: LogicalOpTypeAnd}
 		} else {
 			operators = append(operators, operator.Value)
 			operands = append(operands, expr)
@@ -155,9 +155,9 @@ func (p *parser) parseLogical(initial Expr, encompassed bool) (Expr, error) {
 		i := len(operators) - 1
 		switch operators[i] {
 		case "and":
-			operands[i] = AndExpr{Left: operands[i], Right: operands[i+1]}
+			operands[i] = LogicalExpr{Left: operands[i], Right: operands[i+1], Type: LogicalOpTypeAnd}
 		case "or":
-			operands[i] = OrExpr{Left: operands[i], Right: operands[i+1]}
+			operands[i] = LogicalExpr{Left: operands[i], Right: operands[i+1], Type: LogicalOpTypeOr}
 		}
 		operators = operators[:i]
 		operands = operands[:i+1]
@@ -267,28 +267,30 @@ func (p *parser) parseAttrExpr(encompassed bool) (Expr, error) {
 		return nil, fmt.Errorf("unexpected operand type: %s", operand)
 	}
 
+	var op BinaryOpType
 	switch operator.Value {
 	case "eq":
-		return EqualsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeEquals
 	case "ne":
-		return NotEqualsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeNotEquals
 	case "co":
-		return ContainsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeContains
 	case "sw":
-		return StartsWithExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeStartsWith
 	case "ew":
-		return EndsWithExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeEndsWith
 	case "gt":
-		return GreaterThanExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeGreaterThan
 	case "ge":
-		return GreaterThanOrEqualsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeGreaterThanOr
 	case "lt":
-		return LessThanExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeLessThan
 	case "le":
-		return LessThanOrEqualsExpr{Attr: attr, Value: operandValue, encompassed: encompassed}, nil
+		op = BinaryOpTypeLessThanOr
 	default:
 		return nil, fmt.Errorf("unknown operator: %s", operator)
 	}
+	return BinaryExpr{Attr: attr, Type: op, Value: operandValue, encompassed: encompassed}, nil
 }
 
 func (p *parser) parseAttrPath() (Attr, error) {

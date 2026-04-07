@@ -2,40 +2,44 @@ package scim_filter
 
 import "fmt"
 
+var _ = Expr(LogicalExpr{})
+var _ = Expr(BinaryExpr{})
+var _ = Expr(PresentExpr{})
+var _ = Expr(NotExpr{})
+var _ = Expr(PathExpr{})
+
 type Expr interface {
 	String() string
+	Visit(v Visitor) error
 	isScimExpr()
 }
 
-type AndExpr struct {
+type LogicalOpType string
+
+const (
+	LogicalOpTypeAnd LogicalOpType = "and"
+	LogicalOpTypeOr  LogicalOpType = "or"
+)
+
+type LogicalExpr struct {
 	Left        Expr
 	Right       Expr
+	Type        LogicalOpType
 	encompassed bool
 }
 
-func (e AndExpr) String() string {
+func (e LogicalExpr) String() string {
 	if e.encompassed {
-		return fmt.Sprintf("(%s and %s)", e.Left, e.Right)
+		return fmt.Sprintf("(%s %s %s)", e.Left, e.Type, e.Right)
 	}
-	return fmt.Sprintf("%s and %s", e.Left, e.Right)
+	return fmt.Sprintf("%s %s %s", e.Left, e.Type, e.Right)
 }
 
-func (e AndExpr) isScimExpr() {}
-
-type OrExpr struct {
-	Left        Expr
-	Right       Expr
-	encompassed bool
+func (e LogicalExpr) Visit(v Visitor) error {
+	return v.VisitOpLogical(e)
 }
 
-func (e OrExpr) String() string {
-	if e.encompassed {
-		return fmt.Sprintf("(%s or %s)", e.Left, e.Right)
-	}
-	return fmt.Sprintf("%s or %s", e.Left, e.Right)
-}
-
-func (e OrExpr) isScimExpr() {}
+func (e LogicalExpr) isScimExpr() {}
 
 type PresentExpr struct {
 	Attr        Attr
@@ -44,6 +48,10 @@ type PresentExpr struct {
 
 func (e PresentExpr) String() string {
 	return fmt.Sprintf("%s pr", e.Attr)
+}
+
+func (e PresentExpr) Visit(v Visitor) error {
+	return v.VisitPresent(e)
 }
 
 func (e PresentExpr) isScimExpr() {}
@@ -59,113 +67,40 @@ func (e NotExpr) String() string {
 	return fmt.Sprintf("not(%s)", e.Expr)
 }
 
-type EqualsExpr struct {
+func (e NotExpr) Visit(v Visitor) error {
+	return v.VisitNot(e)
+}
+
+type BinaryOpType string
+
+const (
+	BinaryOpTypeEquals        BinaryOpType = "eq"
+	BinaryOpTypeNotEquals     BinaryOpType = "ne"
+	BinaryOpTypeContains      BinaryOpType = "co"
+	BinaryOpTypeStartsWith    BinaryOpType = "sw"
+	BinaryOpTypeEndsWith      BinaryOpType = "ew"
+	BinaryOpTypeGreaterThan   BinaryOpType = "gt"
+	BinaryOpTypeGreaterThanOr BinaryOpType = "ge"
+	BinaryOpTypeLessThan      BinaryOpType = "lt"
+	BinaryOpTypeLessThanOr    BinaryOpType = "le"
+)
+
+type BinaryExpr struct {
 	Attr        Attr
 	Value       Value
+	Type        BinaryOpType
 	encompassed bool
 }
 
-func (e EqualsExpr) String() string {
-	return fmt.Sprintf("%s eq %s", e.Attr, e.Value)
+func (c BinaryExpr) String() string {
+	return fmt.Sprintf("%s %s %s", c.Attr, c.Type, c.Value)
 }
 
-func (e EqualsExpr) isScimExpr() {}
+func (c BinaryExpr) isScimExpr() {}
 
-type NotEqualsExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
+func (c BinaryExpr) Visit(v Visitor) error {
+	return v.VisitOpBinary(c)
 }
-
-func (n NotEqualsExpr) String() string {
-	return fmt.Sprintf("%s ne %s", n.Attr, n.Value)
-}
-
-func (n NotEqualsExpr) isScimExpr() {}
-
-type ContainsExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (c ContainsExpr) String() string {
-	return fmt.Sprintf("%s co %s", c.Attr, c.Value)
-}
-
-func (c ContainsExpr) isScimExpr() {}
-
-type StartsWithExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (s StartsWithExpr) String() string {
-	return fmt.Sprintf("%s sw %s", s.Attr, s.Value)
-}
-
-func (s StartsWithExpr) isScimExpr() {}
-
-type EndsWithExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (e EndsWithExpr) String() string {
-	return fmt.Sprintf("%s ew %s", e.Attr, e.Value)
-}
-
-func (e EndsWithExpr) isScimExpr() {}
-
-type GreaterThanExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (g GreaterThanExpr) String() string {
-	return fmt.Sprintf("%s gt %s", g.Attr, g.Value)
-}
-
-func (g GreaterThanExpr) isScimExpr() {}
-
-type GreaterThanOrEqualsExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (g GreaterThanOrEqualsExpr) String() string {
-	return fmt.Sprintf("%s ge %s", g.Attr, g.Value)
-}
-
-func (g GreaterThanOrEqualsExpr) isScimExpr() {}
-
-type LessThanExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (l LessThanExpr) String() string {
-	return fmt.Sprintf("%s lt %s", l.Attr, l.Value)
-}
-
-func (l LessThanExpr) isScimExpr() {}
-
-type LessThanOrEqualsExpr struct {
-	Attr        Attr
-	Value       Value
-	encompassed bool
-}
-
-func (l LessThanOrEqualsExpr) String() string {
-	return fmt.Sprintf("%s le %s", l.Attr, l.Value)
-}
-
-func (l LessThanOrEqualsExpr) isScimExpr() {}
 
 type PathExpr struct {
 	Attr        Attr
@@ -182,6 +117,10 @@ func (p PathExpr) String() string {
 
 func (a PathExpr) HasSubAttrExpr() bool {
 	return a.SubAttrExpr != nil
+}
+
+func (a PathExpr) Visit(v Visitor) error {
+	return v.VisitPath(a)
 }
 
 func (p PathExpr) isScimExpr() {}
